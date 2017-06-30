@@ -39,7 +39,7 @@ size_t a_start = delta_start + N - 1;
 
 const double coeff_derivative_delta = 500.;
 const double coeff_derivative_a = 1.;
-const double coeff_delta = 100.;
+const double coeff_delta = 200.;
 const double coeff_a = 1.;
 
 class FG_eval {
@@ -62,21 +62,21 @@ class FG_eval {
 
 	    // The part of the cost based on the reference state.
 	    for (t = 0; t < N; t++) {
-	      fg[0] += CppAD::pow(vars[cte_start + t], 2);
-	      fg[0] += CppAD::pow(vars[epsi_start + t], 2);
-	      fg[0] += CppAD::pow(vars[v_start + t] - ref_v, 2);
+	      fg[0] += 200. * CppAD::pow(vars[cte_start + t], 2);
+	      fg[0] += 200. * CppAD::pow(vars[epsi_start + t], 2);
+	      fg[0] += .1 * CppAD::pow(vars[v_start + t] - ref_v, 2);
 	    }
 
 		// Minimize the use of actuators.
 		for (i = 0; i < N - 1; i++) {
-			fg[0] += coeff_delta* CppAD::pow(vars[delta_start + i], 2);
-			fg[0] += coeff_a * CppAD::pow(vars[a_start + i], 2);
+			fg[0] += CppAD::pow(vars[delta_start + i], 2);
+			fg[0] += CppAD::pow(vars[a_start + i], 2);
 		}
 
 		// Minimize the value gap between sequential actuations.
 		for (i = 0; i < N - 2; i++) {
-			fg[0] += coeff_derivative_delta* CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-			fg[0] += coeff_derivative_a*CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+			fg[0] += coeff_derivative_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+			fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
 		}
 
 	    // Initialization & constraints
@@ -134,13 +134,21 @@ class FG_eval {
   	 }
 };
 
+// Fuction to return starting indexes of all variables
+vector<size_t> MPC::Get_indices() {
+  vector<size_t> indices = {x_start, y_start, psi_start, v_start, cte_start,
+                              epsi_start, delta_start, a_start
+                             };
+  return indices;
+}
+
 //
 // MPC class definition implementation.
 //
 MPC::MPC() {}
 MPC::~MPC() {}
 
-vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<double>& mpc_x, vector<double>& mpc_y) {
+vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 		bool ok = true;
 		size_t i;
 		typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -268,11 +276,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs, vector<
 		//
 		// {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
 		// creates a 2 element double vector.
-
-		for (i = 0; i < N; i++){
-			mpc_x.push_back(solution.x[x_start + i]);
-			mpc_y.push_back(solution.x[y_start + i]);
-		}
 
 		vector<double> return_solution;
 
