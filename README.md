@@ -1,6 +1,32 @@
 # CarND-Controls-MPC
 Self-Driving Car Engineer Nanodegree Program
 
+### Reflections
+The goal of the project is to drive the car around the track using Model Predictive Control.
+
+#### Model
+The model used was Kinematic model which is simplification of dynamic models that ignore tire forces, gravity and mass. The kinematic model uses position (x , y), orientation of the car (psi) and velocity (v).These four parameters along with cross track error (cte) and orientation error (epsi) form a state vector. The actuator parameters are steering angle (angle is restricted between -25 and + 25 degrees) and throttle (positive value for acceleration and negative value for braking.)
+
+Given the state at time t, we can predict the state at time t+1 using the below model predictive equations:
+
+![Equations](equations.png)  
+
+#### Hyper-parameters tuning
+
+The two important parameters are N (number of prediction steps) and dt (time interval between each step).  The dt is supposed to be equal or greater than latency. I chose a dt equal to latency. Higher value of N increases the computation time. I chose a value 10 after some trial and error.
+
+Different weights are applied to cost function, so that car turns smoothly and doesn't crash.  
+
+##### Handling latency
+
+In a real car, an actuation command won't execute instantly - there will be a delay as the command propagates through the system. A realistic delay might be on the order of 100 milliseconds. PID controls doesn't handle latency well. But a Model Predictive Controller can adapt quite well because we can model this latency in the system. I have used a delay of 100ms. Check the code starting at line number 100 in main.cpp.
+
+
+
+
+
+
+
 ---
 
 ## Dependencies
@@ -19,7 +45,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Run either `install-mac.sh` or `install-ubuntu.sh`.
   * If you install from source, checkout to commit `e94b6e1`, i.e.
     ```
-    git clone https://github.com/uWebSockets/uWebSockets 
+    git clone https://github.com/uWebSockets/uWebSockets
     cd uWebSockets
     git checkout e94b6e1
     ```
@@ -31,7 +57,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Mac: `brew install ipopt`
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
-    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`. 
+    * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `bash install_ipopt.sh Ipopt-3.12.1`.
   * Windows: TODO. If you can use the Linux subsystem and follow the Linux instructions.
 * [CppAD](https://www.coin-or.org/CppAD/)
   * Mac: `brew install cppad`
