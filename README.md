@@ -21,8 +21,9 @@ Different weights are applied to cost function, so that car turns smoothly and d
 
 In a real car, an actuation command won't execute instantly - there will be a delay as the command propagates through the system. A realistic delay might be on the order of 100 milliseconds. PID controls doesn't handle latency well. But a Model Predictive Controller can adapt quite well because we can model this latency in the system. I have used a delay of 100ms. Check the code starting at line number 100 in main.cpp.
 
+The model works with car driving with maximum reference speed of 60mph without going out of the track.
 
-
+ ![Simulator screenshot](screenshot.png)  
 
 
 
