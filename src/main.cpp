@@ -91,50 +91,35 @@ int main() {
           double py = j[1]["y"];
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
-          double steer_angle = j[1]["steering_angle"];
+          double steer_value = j[1]["steering_angle"];
+          double throttle_value = j[1]["throttle"];
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-
-          vector<double> mpc_x;
-          vector<double> mpc_y;
-
-          // Transform waypoints in car coordinates
-          for (size_t i = 0; i < ptsx.size(); i++) {
-        	  mpc_x.push_back((ptsx[i] - px)*cos(psi) + (ptsy[i] - py)*sin(psi));
-        	  mpc_y.push_back(-(ptsx[i] - px)*sin(psi) + (ptsy[i] - py)*cos(psi));
-          }
-
-          // Converting way points to Eigen
-          double * ptrx = &mpc_x[0];
-          double * ptry = &mpc_y[0];
-
-          Eigen::Map<Eigen::VectorXd> mpc_x_eigen(ptrx, mpc_x.size());
-          Eigen::Map<Eigen::VectorXd> mpc_y_eigen(ptry, mpc_y.size());
-
-
-          auto coeffs = polyfit(mpc_x_eigen, mpc_y_eigen, 3);
+          Eigen::VectorXd ptsx_trans = Eigen::VectorXd(ptsx.size());
+          Eigen::VectorXd ptsy_trans = Eigen::VectorXd(ptsy.size());
 
           // Predict state after latency before passing to the solver
           double dt = 0.1;
-          px = v * dt;
-          psi = -v * steer_angle * dt / 2.67;
+          px = px + v * cos(psi) * dt;
+          py = py + v * sin(psi) * dt;
+          psi = psi - v * steer_value / 2.67  * dt;
+          v = v + throttle_value * dt;
 
+          for (int i = 0; i < ptsx.size(); i++) {
+              ptsx_trans[i] = (ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi);
+              ptsy_trans[i] = (ptsy[i] - py) * cos(psi) - (ptsx[i] - px) * sin(psi);
+          }
+            
+          auto coeffs = polyfit(ptsx_trans, ptsy_trans, 3);
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
-          double cte = polyeval(coeffs, px);
-          // Due to the sign starting at 0, the orientation error is -f'(x).
-          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
-          double epsi = -atan(coeffs[1] + 2 * px * coeffs[2] + 3 * px * px * coeffs[2]);
+          double cte = polyeval(coeffs, 0);
+          double epsi = -atan(coeffs[1]);
 
           Eigen::VectorXd state(6);
-          state << px, 0.0, psi, v, cte, epsi;
+          state << 0, 0, 0, v, cte, epsi;
 
           auto vars = mpc.Solve(state, coeffs);
+
 
           // Getting starting indices of state and actuators
           vector<size_t> indices = mpc.Get_indices();
@@ -144,8 +129,6 @@ int main() {
           size_t delta_start = indices[6];
           size_t a_start = indices[7];
 
-          double steer_value;
-          double throttle_value;
 
           steer_value = -vars[delta_start];
           throttle_value = vars[a_start];
@@ -153,14 +136,14 @@ int main() {
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
+          msgJson["steering_angle"] = steer_value / (deg2rad(25) * 2.67);
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
-          for (int i = 1; i < 10; i++) {
+          for (int i = 1; i < 6; i++) {
         	  mpc_x_vals.push_back(vars[x_start + i]);
         	  mpc_y_vals.push_back(vars[y_start + i]);
           }
@@ -176,6 +159,10 @@ int main() {
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
+          for (int i = 0; i < ptsx.size(); i++) {
+              next_x_vals.push_back(ptsx_trans[i]);
+              next_y_vals.push_back(ptsy_trans[i]);
+          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
